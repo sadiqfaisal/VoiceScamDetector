@@ -99,7 +99,11 @@ from scam_detector import analyze_transcript
 
 from voice_detector import analyze_voice
 
+<<<<<<< HEAD
 
+=======
+from report_generator import generate_report
+>>>>>>> 98e8a6f (Add Voice Shield project with incident reports)
 # ==========================================
 # FLASK CONFIGURATION
 # ==========================================
@@ -576,6 +580,58 @@ def analyze():
         }), 500
 
 
+# ==========================================
+# INCIDENT REPORT API
+# ==========================================
+
+@app.route(
+    "/generate-report",
+    methods=["POST"]
+)
+def generate_incident_report():
+
+    try:
+
+        data = request.get_json()
+
+        if not data:
+
+            return jsonify({
+                "error": "No report data received."
+            }), 400
+
+        report_result = generate_report(data)
+
+        return jsonify({
+
+            "success": True,
+
+            "report_id":
+                report_result["report_id"],
+
+            "report":
+                report_result["report"],
+
+            "qr_code":
+                report_result["qr_code"]
+
+        })
+
+    except Exception as error:
+
+        print(
+            "Report generation error:",
+            error
+        )
+
+        return jsonify({
+
+            "success": False,
+
+            "error":
+                str(error)
+
+        }), 500
 # ==========================================
 # START SERVER
 # ==========================================
