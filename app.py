@@ -99,11 +99,7 @@ from scam_detector import analyze_transcript
 
 from voice_detector import analyze_voice
 
-<<<<<<< HEAD
-
-=======
 from report_generator import generate_report
->>>>>>> 98e8a6f (Add Voice Shield project with incident reports)
 # ==========================================
 # FLASK CONFIGURATION
 # ==========================================
