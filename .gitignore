@@ -1,5 +1,9 @@
-﻿venv/
+venv/
+venv_old/
 __pycache__/
-uploads/
 *.pyc
+uploads/*
+reports/*
+voiceshield.db
+*.log
 .env
