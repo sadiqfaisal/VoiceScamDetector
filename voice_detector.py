@@ -1,343 +1,312 @@
 import os
+import sys
+
+import librosa
 import numpy as np
+import torch
+import torch.nn.functional as F
 
 
-# ==========================================
-# VOICE DETECTOR
-# ==========================================
-#
-# This module currently provides a baseline
-# audio analysis system.
-#
-# Later, your Core ML teammates can replace
-# this function with the trained ASVspoof /
-# pretrained-audio-model classifier.
-#
-# IMPORTANT:
-# This is NOT claiming that acoustic heuristics
-# can reliably prove an AI-generated voice.
-# The real trained classifier should replace
-# this baseline before production use.
-# ==========================================
+BASE_DIR = os.path.abspath(
+    os.path.dirname(__file__)
+)
+
+AASIST_DIR = os.path.join(
+    BASE_DIR,
+    "models",
+    "aasist"
+)
+
+if AASIST_DIR not in sys.path:
+    sys.path.insert(0, AASIST_DIR)
+
+
+try:
+    from AASIST import Model
+except Exception as error:
+    Model = None
+    AASIST_IMPORT_ERROR = str(error)
+
+
+MODEL_PATH = os.path.join(
+    AASIST_DIR,
+    "AASIST.pth"
+)
+
+
+AASIST_CONFIG = {
+    "architecture": "AASIST",
+    "nb_samp": 64600,
+    "first_conv": 128,
+    "filts": [
+        70,
+        [1, 32],
+        [32, 32],
+        [32, 64],
+        [64, 64]
+    ],
+    "gat_dims": [
+        64,
+        32
+    ],
+    "pool_ratios": [
+        0.5,
+        0.7,
+        0.5,
+        0.5
+    ],
+    "temperatures": [
+        2.0,
+        2.0,
+        100.0,
+        100.0
+    ]
+}
+
+
+_model = None
+
+DEVICE = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "cpu"
+)
+
+
+def get_model():
+    global _model
+
+    if _model is not None:
+        return _model
+
+    if Model is None:
+        raise RuntimeError(
+            "AASIST import failed: "
+            + AASIST_IMPORT_ERROR
+        )
+
+    if not os.path.exists(MODEL_PATH):
+        raise RuntimeError(
+            "AASIST checkpoint not found: "
+            + MODEL_PATH
+        )
+
+    print("Loading official AASIST...")
+    print("AASIST device:", DEVICE)
+
+    model = Model(AASIST_CONFIG)
+
+    checkpoint = torch.load(
+        MODEL_PATH,
+        map_location=DEVICE,
+        weights_only=False
+    )
+
+    if isinstance(checkpoint, dict):
+
+        if "state_dict" in checkpoint:
+            state_dict = checkpoint["state_dict"]
+
+        elif "model_state_dict" in checkpoint:
+            state_dict = checkpoint["model_state_dict"]
+
+        else:
+            state_dict = checkpoint
+
+    else:
+        state_dict = checkpoint.state_dict()
+
+
+    cleaned_state_dict = {}
+
+    for key, value in state_dict.items():
+
+        if key.startswith("module."):
+            key = key[7:]
+
+        cleaned_state_dict[key] = value
+
+
+    model.load_state_dict(
+        cleaned_state_dict,
+        strict=True
+    )
+
+    model.to(DEVICE)
+    model.eval()
+
+    _model = model
+
+    print("AASIST loaded successfully.")
+
+    return _model
+
+
+def prepare_audio(audio_path):
+
+    if not os.path.exists(audio_path):
+        raise FileNotFoundError(
+            audio_path
+        )
+
+    audio, sample_rate = librosa.load(
+        audio_path,
+        sr=16000,
+        mono=True
+    )
+
+    audio = np.asarray(
+        audio,
+        dtype=np.float32
+    )
+
+    if audio.size == 0:
+        raise ValueError(
+            "Audio contains no usable samples."
+        )
+
+
+    target_length = (
+        AASIST_CONFIG["nb_samp"]
+    )
+
+
+    if len(audio) < target_length:
+
+        repeats = int(
+            np.ceil(
+                target_length / len(audio)
+            )
+        )
+
+        audio = np.tile(
+            audio,
+            repeats
+        )
+
+
+    audio = audio[:target_length]
+
+    return audio.astype(
+        np.float32
+    )
 
 
 def analyze_voice(audio_path):
 
-    """
-    Analyze an audio file and return a standard
-    result format expected by app.py.
-
-    Returns:
-        {
-            "voice_result": "NORMAL" / "SUSPICIOUS",
-            "fake_probability": 0-100,
-            "confidence": 0-100,
-            "details": [...]
-        }
-    """
-
-    # --------------------------------------
-    # CHECK FILE
-    # --------------------------------------
-
     if not os.path.exists(audio_path):
 
         return {
-
-            "voice_result":
-                "UNKNOWN",
-
-            "fake_probability":
-                0,
-
-            "confidence":
-                0,
-
-            "details":
-                [
-                    "Audio file was not found."
-                ]
-
+            "voice_result": "UNKNOWN",
+            "fake_probability": 0,
+            "human_probability": 0,
+            "confidence": 0,
+            "aasist_score": None,
+            "analysis_type": "ERROR",
+            "details": [
+                "Audio file was not found."
+            ]
         }
 
 
     try:
 
-        # ----------------------------------
-        # LOAD AUDIO
-        # ----------------------------------
+        audio = prepare_audio(
+            audio_path
+        )
 
-        import librosa
+        model = get_model()
 
 
-        audio, sample_rate = librosa.load(
+        waveform = torch.from_numpy(
+            audio
+        ).unsqueeze(0).to(DEVICE)
 
-            audio_path,
 
-            sr=16000,
+        with torch.no_grad():
 
-            mono=True
+            hidden, logits = model(
+                waveform
+            )
 
+
+            probabilities = F.softmax(
+                logits,
+                dim=-1
+            )
+
+
+            spoof_score = float(
+                probabilities[0, 0].item()
+            )
+
+
+            bona_fide_score = float(
+                probabilities[0, 1].item()
+            )
+
+
+            bona_fide_logit = float(
+                logits[0, 1].item()
+            )
+
+
+        fake_score = (
+            spoof_score * 100.0
+        )
+
+        human_score = (
+            bona_fide_score * 100.0
         )
 
 
-        # ----------------------------------
-        # BASIC AUDIO VALIDATION
-        # ----------------------------------
+        if fake_score >= 70:
 
-        if len(audio) == 0:
-
-            return {
-
-                "voice_result":
-                    "UNKNOWN",
-
-                "fake_probability":
-                    0,
-
-                "confidence":
-                    0,
-
-                "details":
-                    [
-                        "The audio file contains no usable audio."
-                    ]
-
-            }
-
-
-        # ----------------------------------
-        # NORMALIZE
-        # ----------------------------------
-
-        audio = audio.astype(
-            np.float32
-        )
-
-
-        max_value = np.max(
-            np.abs(audio)
-        )
-
-
-        if max_value > 0:
-
-            audio = (
-                audio
-                /
-                max_value
+            voice_result = (
+                "AI / SYNTHETIC VOICE"
             )
 
+        elif fake_score >= 45:
 
-        # ----------------------------------
-        # RMS ENERGY
-        # ----------------------------------
-
-        rms = float(
-
-            np.sqrt(
-
-                np.mean(
-                    audio ** 2
-                )
-
-            )
-
-        )
-
-
-        # ----------------------------------
-        # ZERO CROSSING RATE
-        # ----------------------------------
-
-        zero_crossings = np.mean(
-
-            np.abs(
-                np.diff(
-                    np.sign(audio)
-                )
-            )
-
-            >
-
-            0
-
-        )
-
-
-        # ----------------------------------
-        # SPECTRAL FEATURES
-        # ----------------------------------
-
-        spectral_centroid = librosa.feature.spectral_centroid(
-
-            y=audio,
-
-            sr=sample_rate
-
-        )[0]
-
-
-        centroid_mean = float(
-
-            np.mean(
-                spectral_centroid
-            )
-
-        )
-
-
-        spectral_bandwidth = librosa.feature.spectral_bandwidth(
-
-            y=audio,
-
-            sr=sample_rate
-
-        )[0]
-
-
-        bandwidth_mean = float(
-
-            np.mean(
-                spectral_bandwidth
-            )
-
-        )
-
-
-        # ----------------------------------
-        # DETERMINE BASIC AUDIO QUALITY
-        # ----------------------------------
-
-        details = []
-
-
-        if rms < 0.005:
-
-            details.append(
-                "Very low audio energy detected."
-            )
-
-
-        elif rms > 0.35:
-
-            details.append(
-                "High recording energy detected."
-            )
-
-
-        else:
-
-            details.append(
-                "Audio energy appears normal."
-            )
-
-
-        if zero_crossings < 0.01:
-
-            details.append(
-                "Low zero-crossing activity."
-            )
-
-        elif zero_crossings > 0.25:
-
-            details.append(
-                "High zero-crossing activity."
+            voice_result = (
+                "SUSPICIOUS / UNCERTAIN"
             )
 
         else:
 
-            details.append(
-                "Normal zero-crossing activity."
+            voice_result = (
+                "LIKELY HUMAN VOICE"
             )
 
 
-        # ----------------------------------
-        # BASELINE SUSPICION SCORE
-        # ----------------------------------
-        #
-        # This is intentionally conservative.
-        #
-        # We do NOT claim that these features
-        # can accurately identify deepfakes.
-        #
-        # The actual ML classifier will replace
-        # this section.
-        # ----------------------------------
+        confidence = (
+            abs(fake_score - 50.0)
+            * 2.0
+        )
 
-        suspicion = 0
-
-
-        # Very unusual silence/energy
-
-        if rms < 0.003:
-
-            suspicion += 15
-
-
-        # Extremely high spectral centroid
-
-        if centroid_mean > 5000:
-
-            suspicion += 10
-
-
-        # Very narrow spectral bandwidth
-
-        if bandwidth_mean < 1000:
-
-            suspicion += 10
-
-
-        # ----------------------------------
-        # LIMIT SCORE
-        # ----------------------------------
-
-        suspicion = min(
-
-            max(
-                suspicion,
-                0
-            ),
-
-            100
-
+        confidence = float(
+            np.clip(
+                confidence,
+                0,
+                100
+            )
         )
 
 
-        # ----------------------------------
-        # RESULT
-        # ----------------------------------
+        details = [
 
-        if suspicion >= 35:
+            "Official AASIST anti-spoofing model used.",
 
-            voice_result = "SUSPICIOUS"
+            "Audio normalized to mono 16 kHz.",
 
-        else:
+            "AASIST analyzes a 64,600-sample input window.",
 
-            voice_result = "NORMAL"
+            f"Bona-fide model logit: {bona_fide_logit:.4f}",
 
+            f"AI / spoof score: {fake_score:.1f}%",
 
-        # ----------------------------------
-        # CONFIDENCE
-        # ----------------------------------
-
-        #
-        # Baseline confidence is deliberately
-        # low because this is not a trained
-        # anti-spoofing model.
-        #
-
-        confidence = 35
-
-
-        details.append(
-
-            "Baseline acoustic analysis only. "
-            "A trained anti-spoofing model is "
-            "required for reliable AI-voice detection."
-
-        )
+            f"Human / bona-fide score: {human_score:.1f}%"
+        ]
 
 
         return {
@@ -346,40 +315,44 @@ def analyze_voice(audio_path):
                 voice_result,
 
             "fake_probability":
-                suspicion,
+                round(
+                    fake_score,
+                    2
+                ),
+
+            "human_probability":
+                round(
+                    human_score,
+                    2
+                ),
 
             "confidence":
-                confidence,
+                round(
+                    confidence,
+                    2
+                ),
+
+            "aasist_score":
+                round(
+                    bona_fide_logit,
+                    6
+                ),
+
+            "analysis_type":
+                "AASIST",
 
             "details":
                 details
-
-        }
-
-
-    except ImportError:
-
-        return {
-
-            "voice_result":
-                "UNKNOWN",
-
-            "fake_probability":
-                0,
-
-            "confidence":
-                0,
-
-            "details":
-                [
-                    "librosa is not installed."
-                ]
-
         }
 
 
     except Exception as error:
 
+        print(
+            "AASIST ERROR:",
+            repr(error)
+        )
+
         return {
 
             "voice_result":
@@ -388,50 +361,20 @@ def analyze_voice(audio_path):
             "fake_probability":
                 0,
 
+            "human_probability":
+                0,
+
             "confidence":
                 0,
 
-            "details":
-                [
-                    "Voice analysis error: "
-                    +
-                    str(error)
-                ]
+            "aasist_score":
+                None,
 
+            "analysis_type":
+                "ERROR",
+
+            "details": [
+                "AI voice analysis failed.",
+                str(error)
+            ]
         }
-
-
-# ==========================================
-# DIRECT TEST
-# ==========================================
-
-if __name__ == "__main__":
-
-    print()
-    print("=" * 55)
-    print("VOICE SHIELD - VOICE DETECTOR")
-    print("=" * 55)
-    print()
-
-    print(
-        "This module is ready."
-    )
-
-    print()
-
-    print(
-        "Usage:"
-    )
-
-    print(
-        "analyze_voice('path/to/audio.wav')"
-    )
-
-    print()
-
-    print(
-        "The baseline detector will later be "
-        "replaced by the trained ASVspoof model."
-    )
-
-    print()

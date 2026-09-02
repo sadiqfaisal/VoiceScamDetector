@@ -1,3 +1,10 @@
-flask
+Flask
 openai-whisper
-torch
+torch==2.14.0
+numpy
+scipy
+librosa
+soundfile
+qrcode[pil]
+Pillow
+huggingface_hub

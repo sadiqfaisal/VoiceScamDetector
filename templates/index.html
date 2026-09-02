@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>VoiceShield | AI Voice Scam Detector</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+
+<header class="topbar">
+    <div class="brand">
+        <div class="brand-icon">🛡️</div>
+
+        <div>
+            <h1>VoiceShield</h1>
+            <p>AI Voice Scam Detection Platform</p>
+        </div>
+    </div>
+
+    <a
+        href="/history"
+        class="nav-link"
+    >
+        Incident History
+    </a>
+</header>
+
+
+<main class="container">
+
+    <section class="hero">
+        <div>
+            <span class="eyebrow">
+                SMART CALL SECURITY
+            </span>
+
+            <h2>
+                Detect suspicious calls before
+                they become costly.
+            </h2>
+
+            <p>
+                VoiceShield combines speech transcription,
+                scam-language analysis and AI voice
+                anti-spoofing to produce a unified risk
+                assessment.
+            </p>
+        </div>
+
+        <div class="hero-shield">
+            🛡️
+        </div>
+    </section>
+
+
+    <section class="card">
+
+        <div class="card-header">
+            <div>
+                <h3>Analyze a Voice Recording</h3>
+                <p>
+                    Upload a suspicious call recording
+                    for automated analysis.
+                </p>
+            </div>
+        </div>
+
+
+        <form id="analysisForm">
+
+            <div class="form-grid">
+
+                <div class="field">
+                    <label for="callerName">
+                        Caller Name
+                    </label>
+
+                    <input
+                        id="callerName"
+                        type="text"
+                        placeholder="Optional"
+                    >
+                </div>
+
+
+                <div class="field">
+                    <label for="callerNumber">
+                        Caller Number
+                    </label>
+
+                    <input
+                        id="callerNumber"
+                        type="text"
+                        placeholder="Optional"
+                    >
+                </div>
+
+            </div>
+
+
+            <div
+                id="dropZone"
+                class="drop-zone"
+            >
+
+                <div class="upload-icon">
+                    🎙️
+                </div>
+
+                <h4>
+                    Drop audio here
+                </h4>
+
+                <p>
+                    or choose a recording from your computer
+                </p>
+
+                <input
+                    id="audioFile"
+                    name="audio"
+                    type="file"
+                    accept="audio/*,.webm,.mp4,.mpeg"
+                    hidden
+                >
+
+                <button
+                    type="button"
+                    id="chooseFileButton"
+                    class="secondary-button"
+                >
+                    Choose Audio
+                </button>
+
+                <div
+                    id="selectedFile"
+                    class="selected-file"
+                ></div>
+
+            </div>
+
+
+            <button
+                id="analyzeButton"
+                type="submit"
+                class="primary-button full-width"
+            >
+                🔎 Analyze Recording
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <section class="card live-card">
+
+        <div class="card-header">
+            <div>
+                <h3>🎤 Live Microphone Analysis</h3>
+
+                <p>
+                    Record a short sample and analyze it
+                    directly from your microphone.
+                </p>
+            </div>
+        </div>
+
+
+        <div class="live-controls">
+
+            <button
+                id="liveRecordButton"
+                class="primary-button"
+                type="button"
+            >
+                🔴 Start Recording
+            </button>
+
+            <button
+                id="stopRecordButton"
+                class="danger-button"
+                type="button"
+                disabled
+            >
+                ⏹ Stop & Analyze
+            </button>
+
+            <span
+                id="liveTimer"
+                class="timer"
+            >
+                00:00
+            </span>
+
+        </div>
+
+
+        <div
+            id="liveStatus"
+            class="status-text"
+        >
+            Microphone is ready.
+        </div>
+
+    </section>
+
+
+    <section
+        id="loadingSection"
+        class="card loading-card hidden"
+    >
+
+        <div class="spinner"></div>
+
+        <h3>
+            Analyzing audio...
+        </h3>
+
+        <p>
+            Whisper is transcribing the speech and
+            VoiceShield is checking scam indicators
+            and voice authenticity.
+        </p>
+
+    </section>
+
+
+    <section
+        id="errorSection"
+        class="card error-card hidden"
+    >
+
+        <h3>⚠️ Analysis Error</h3>
+
+        <p id="errorMessage"></p>
+
+    </section>
+
+
+    <section
+        id="resultsSection"
+        class="results hidden"
+    >
+
+        <div class="section-title">
+            <div>
+                <span class="eyebrow">
+                    ANALYSIS RESULT
+                </span>
+
+                <h2>
+                    Threat Assessment
+                </h2>
+            </div>
+        </div>
+
+
+        <div class="risk-card">
+
+            <div class="risk-main">
+
+                <span id="riskBadge" class="risk-badge">
+                    UNKNOWN
+                </span>
+
+                <div
+                    id="riskScore"
+                    class="big-score"
+                >
+                    0
+                </div>
+
+                <div class="score-label">
+                    Overall Risk Score / 100
+                </div>
+
+            </div>
+
+
+            <div class="risk-description">
+
+                <h3 id="riskTitle">
+                    Analysis pending
+                </h3>
+
+                <p id="riskMessage">
+                    -
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="result-grid">
+
+            <div class="result-card">
+
+                <h3>📝 Transcript</h3>
+
+                <div
+                    id="transcript"
+                    class="transcript"
+                >
+                    -
+                </div>
+
+            </div>
+
+
+            <div class="result-card">
+
+                <h3>🚨 Scam Analysis</h3>
+
+                <div class="metric">
+                    <span>Scam Score</span>
+                    <strong id="scamScore">0%</strong>
+                </div>
+
+                <div
+                    id="indicatorsList"
+                    class="indicator-list"
+                >
+                </div>
+
+            </div>
+
+
+            <div class="result-card">
+
+                <h3>🤖 Voice Authenticity</h3>
+
+                <div class="voice-result">
+                    <strong id="voiceResult">
+                        UNKNOWN
+                    </strong>
+                </div>
+
+                <div class="metric">
+                    <span>AI / Spoof Score</span>
+                    <strong id="voiceScore">0%</strong>
+                </div>
+
+            </div>
+
+
+            <div class="result-card">
+
+                <h3>🛡️ Recommendation</h3>
+
+                <p
+                    id="recommendation"
+                    class="recommendation"
+                >
+                    -
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>Why VoiceShield Flagged This</h3>
+
+            <ul
+                id="whyFlaggedList"
+                class="why-list"
+            >
+            </ul>
+
+        </div>
+
+
+        <div class="card report-card">
+
+            <div>
+                <h3>
+                    📄 Generate Official Incident Report
+                </h3>
+
+                <p>
+                    Save the analysis with a unique
+                    report ID and QR code.
+                </p>
+            </div>
+
+            <button
+                id="generateReportButton"
+                class="primary-button"
+            >
+                Generate Report
+            </button>
+
+            <div
+                id="reportResult"
+                class="report-result hidden"
+            >
+
+                <strong>
+                    Report created successfully.
+                </strong>
+
+                <p>
+                    Report ID:
+                    <span id="reportId"></span>
+                </p>
+
+                <a
+                    id="viewReportLink"
+                    class="secondary-button"
+                    target="_blank"
+                >
+                    View Report
+                </a>
+
+                <div class="qr-wrapper">
+                    <img
+                        id="qrCode"
+                        alt="Report QR Code"
+                    >
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer class="footer">
+    <p>
+        VoiceShield • SIH Project • AI-assisted
+        voice scam detection
+    </p>
+
+    <p>
+        Automated results are advisory and should
+        be independently verified.
+    </p>
+</footer>
+
+
+<script
+    src="{{ url_for('static', filename='app.js') }}"
+></script>
+
+</body>
+</html>

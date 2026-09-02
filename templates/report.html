@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        VoiceShield Report {{ report.report_id }}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            🛡️
+        </div>
+
+        <div>
+            <h1>VoiceShield</h1>
+            <p>Incident Analysis Report</p>
+        </div>
+
+    </div>
+
+    <a
+        href="/"
+        class="nav-link"
+    >
+        New Analysis
+    </a>
+
+</header>
+
+
+<main class="container">
+
+    <section class="card">
+
+        <div class="report-header">
+
+            <div>
+                <span class="eyebrow">
+                    OFFICIAL INCIDENT REPORT
+                </span>
+
+                <h2>
+                    Voice Scam Analysis
+                </h2>
+
+                <p class="report-id">
+                    {{ report.report_id }}
+                </p>
+            </div>
+
+
+            <div>
+
+                <span
+                    class="risk-badge {{ report.risk_level|lower }}"
+                >
+                    {{ report.risk_level }}
+                </span>
+
+                <div class="big-score">
+                    {{ report.risk_score }}
+                </div>
+
+                <div class="score-label">
+                    Overall Risk Score / 100
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h3>Incident Information</h3>
+
+        <div class="report-meta">
+
+            <div class="meta-box">
+                <span>Report ID</span>
+                {{ report.report_id }}
+            </div>
+
+            <div class="meta-box">
+                <span>Date & Time</span>
+                {{ report.created_at or report.date_time }}
+            </div>
+
+            <div class="meta-box">
+                <span>Caller Name</span>
+                {{ report.caller_name or report.caller_information.caller_name }}
+            </div>
+
+            <div class="meta-box">
+                <span>Caller Number</span>
+                {{ report.caller_number or report.caller_information.caller_number }}
+            </div>
+
+            <div class="meta-box">
+                <span>Analysis Mode</span>
+                {{ report.analysis_mode }}
+            </div>
+
+            <div class="meta-box">
+                <span>Detection Result</span>
+                {{ report.detection_result }}
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h3>Speech Transcript</h3>
+
+        <div class="report-transcript">
+            {{ report.transcript or "No transcript available." }}
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h3>Why This Was Flagged</h3>
+
+        <ul class="why-list">
+
+            {% for reason in report.why_flagged %}
+                <li>{{ reason }}</li>
+            {% endfor %}
+
+        </ul>
+
+    </section>
+
+
+    <section class="result-grid">
+
+        <div class="result-card">
+
+            <h3>Scam Analysis</h3>
+
+            <div class="metric">
+                <span>Scam Score</span>
+
+                <strong>
+                    {{ report.scam_analysis.scam_score or 0 }}%
+                </strong>
+            </div>
+
+            <div class="metric">
+                <span>Risk Level</span>
+
+                <strong>
+                    {{ report.scam_analysis.risk_level or "UNKNOWN" }}
+                </strong>
+            </div>
+
+            <div class="metric">
+                <span>Detected Keywords</span>
+
+                <strong>
+                    {{ report.scam_analysis.detected_keywords|length }}
+                </strong>
+            </div>
+
+        </div>
+
+
+        <div class="result-card">
+
+            <h3>Voice Authenticity</h3>
+
+            <div class="metric">
+                <span>Classification</span>
+
+                <strong>
+                    {{ report.voice_analysis.voice_result or "UNKNOWN" }}
+                </strong>
+            </div>
+
+            <div class="metric">
+                <span>AI / Spoof Score</span>
+
+                <strong>
+                    {{ report.voice_analysis.fake_probability or 0 }}%
+                </strong>
+            </div>
+
+            <div class="metric">
+                <span>Human Score</span>
+
+                <strong>
+                    {{ report.voice_analysis.human_probability or 0 }}%
+                </strong>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h3>Recommendation</h3>
+
+        <p>
+            {{ report.recommendation }}
+        </p>
+
+    </section>
+
+
+    <section class="card">
+
+        <h3>Report QR Code</h3>
+
+        <p>
+            Scan this QR code to reopen this
+            incident report.
+        </p>
+
+        <div class="qr-wrapper">
+
+            <img
+                src="/report/{{ report.report_id }}/qr"
+                alt="VoiceShield report QR code"
+            >
+
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        <p>
+            <strong>Important:</strong>
+            VoiceShield provides AI-assisted
+            security analysis. Results should be
+            independently verified and are not
+            a substitute for an official forensic
+            determination.
+        </p>
+
+    </section>
+
+</main>
+
+
+<footer class="footer">
+
+    VoiceShield • AI-assisted voice scam detection
+
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        VoiceShield | Incident History
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            🛡️
+        </div>
+
+        <div>
+            <h1>VoiceShield</h1>
+            <p>Incident History</p>
+        </div>
+
+    </div>
+
+
+    <a
+        href="/"
+        class="nav-link"
+    >
+        New Analysis
+    </a>
+
+</header>
+
+
+<main class="container">
+
+    <section class="hero">
+
+        <div>
+
+            <span class="eyebrow">
+                INCIDENT DATABASE
+            </span>
+
+            <h2>
+                Analysis History
+            </h2>
+
+            <p>
+                Previously generated VoiceShield
+                incident reports.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <section class="card">
+
+        {% if reports %}
+
+        <div class="history-table-wrapper">
+
+            <table class="history-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Report ID
+                        </th>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Caller
+                        </th>
+
+                        <th>
+                            Mode
+                        </th>
+
+                        <th>
+                            Risk
+                        </th>
+
+                        <th>
+                            Score
+                        </th>
+
+                        <th>
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for item in reports %}
+
+                    <tr>
+
+                        <td>
+                            {{ item.report_id }}
+                        </td>
+
+                        <td>
+                            {{ item.created_at }}
+                        </td>
+
+                        <td>
+                            {{ item.caller_name }}
+                        </td>
+
+                        <td>
+                            {{ item.analysis_mode }}
+                        </td>
+
+                        <td>
+                            <span
+                                class="risk-badge {{ item.risk_level|lower }}"
+                            >
+                                {{ item.risk_level }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {{ item.risk_score }}
+                        </td>
+
+                        <td>
+                            <a
+                                class="history-link"
+                                href="/report/{{ item.report_id }}"
+                            >
+                                View
+                            </a>
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+        <h3>
+            No reports yet.
+        </h3>
+
+        <p>
+            Run an analysis and generate your
+            first incident report.
+        </p>
+
+        <a
+            href="/"
+            class="primary-button"
+        >
+            Start Analysis
+        </a>
+
+        {% endif %}
+
+    </section>
+
+</main>
+
+
+<footer class="footer">
+
+    VoiceShield • SIH Project
+
+</footer>
+
+</body>
+</html>

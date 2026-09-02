@@ -2,25 +2,39 @@ import os
 import json
 import uuid
 import qrcode
+
 from datetime import datetime
 
 
-REPORT_FOLDER = "reports"
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+REPORT_FOLDER = os.path.join(BASE_DIR, "reports")
 
 os.makedirs(REPORT_FOLDER, exist_ok=True)
 
 
-def generate_report(data):
-
-    report_id = "VS-" + datetime.now().strftime("%Y%m%d-%H%M%S")
+def generate_report(data, base_url=None):
+    report_id = (
+        "VS-"
+        + datetime.now().strftime("%Y%m%d-%H%M%S")
+        + "-"
+        + uuid.uuid4().hex[:6].upper()
+    )
 
     report = {
         "report_id": report_id,
-        "date_time": datetime.now().strftime("%d-%m-%Y %I:%M:%S %p"),
+        "date_time": datetime.now().strftime(
+            "%d-%m-%Y %I:%M:%S %p"
+        ),
 
         "caller_information": {
-            "caller_name": data.get("caller_name", "Unknown"),
-            "caller_number": data.get("caller_number", "Not available")
+            "caller_name": data.get(
+                "caller_name",
+                "Unknown"
+            ),
+            "caller_number": data.get(
+                "caller_number",
+                "Not available"
+            )
         },
 
         "analysis_mode": data.get(
@@ -56,11 +70,18 @@ def generate_report(data):
         "recommendation": data.get(
             "recommendation",
             ""
+        ),
+
+        "scam_analysis": data.get(
+            "scam_analysis",
+            {}
+        ),
+
+        "voice_analysis": data.get(
+            "voice_analysis",
+            {}
         )
     }
-
-
-    # Save JSON report
 
     report_path = os.path.join(
         REPORT_FOLDER,
@@ -72,7 +93,6 @@ def generate_report(data):
         "w",
         encoding="utf-8"
     ) as file:
-
         json.dump(
             report,
             file,
@@ -80,13 +100,17 @@ def generate_report(data):
             ensure_ascii=False
         )
 
-
-    # Generate QR code
-
-    qr_data = (
-        "http://127.0.0.1:5000/report/"
-        + report_id
-    )
+    if base_url:
+        qr_data = (
+            base_url.rstrip("/")
+            + "/report/"
+            + report_id
+        )
+    else:
+        qr_data = (
+            "http://127.0.0.1:5000/report/"
+            + report_id
+        )
 
     qr = qrcode.make(qr_data)
 
@@ -97,9 +121,10 @@ def generate_report(data):
 
     qr.save(qr_path)
 
-
     return {
         "report_id": report_id,
         "report": report,
-        "qr_code": "/" + qr_path.replace("\\", "/")
+        "report_path": report_path,
+        "qr_path": qr_path,
+        "qr_code": "/report/" + report_id + "/qr"
     }
