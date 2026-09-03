@@ -8,3 +8,4 @@ soundfile
 qrcode[pil]
 Pillow
 huggingface_hub
+gunicorn
