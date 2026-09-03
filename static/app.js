@@ -527,8 +527,11 @@ async function analyzeLiveRecording() {
             );
 
 
-        const data =
-            await response.json();
+        if (!response.ok) {
+  const text = await response.text();
+  throw new Error(`Server error ${response.status}: ${text || '(empty response)'}`);
+}
+const data = await response.json();
 
 
         if (!response.ok ||
