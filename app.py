@@ -2,6 +2,10 @@ import os
 import uuid
 import shutil
 
+import imageio_ffmpeg
+import os
+os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+
 from flask import (
     Flask,
     render_template,
