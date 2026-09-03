@@ -65,6 +65,7 @@ app.config["MAX_CONTENT_LENGTH"] = (
     25 * 1024 * 1024
 )
 
+initialize_database()
 
 ALLOWED_EXTENSIONS = {
     "wav",
@@ -647,7 +648,6 @@ def history_api():
 
 
 if __name__ == "__main__":
-    initialize_database()
 
     print()
     print("=" * 60)
