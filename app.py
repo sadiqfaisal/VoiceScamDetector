@@ -1,4 +1,5 @@
 import os
+import json
 import uuid
 import shutil
 
@@ -35,6 +36,13 @@ from database import (
 
 BASE_DIR = os.path.abspath(
     os.path.dirname(__file__)
+)
+FFMPEG_DIR = os.path.join(BASE_DIR, "bin")
+
+os.environ["PATH"] = (
+    FFMPEG_DIR
+    + os.pathsep
+    + os.environ.get("PATH", "")
 )
 
 UPLOAD_FOLDER = os.path.join(
@@ -572,13 +580,33 @@ def generate_report_route():
 @app.route(
     "/report/<report_id>"
 )
+@app.route("/report/<report_id>")
 def report_page(report_id):
-    report = get_incident_report(
-        report_id
-    )
 
-    if not report:
+    report_record = get_incident_report(report_id)
+
+    if not report_record:
         abort(404)
+
+    # Load the complete report from the JSON file
+    report_path = report_record.get("report_path")
+
+    if report_path and os.path.exists(report_path):
+
+        try:
+            with open(
+                report_path,
+                "r",
+                encoding="utf-8"
+            ) as file:
+                report = json.load(file)
+
+        except Exception as error:
+            print("REPORT LOAD ERROR:", repr(error))
+            report = report_record
+
+    else:
+        report = report_record
 
     return render_template(
         "report.html",
@@ -664,7 +692,7 @@ if __name__ == "__main__":
     print()
 
     app.run(
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=5000,
         debug=False,
         use_reloader=False

@@ -1,6 +1,7 @@
 import os
 import sys
-
+import subprocess
+import tempfile
 import librosa
 import numpy as np
 import torch
@@ -145,53 +146,100 @@ def get_model():
 def prepare_audio(audio_path):
 
     if not os.path.exists(audio_path):
-        raise FileNotFoundError(
-            audio_path
+        raise FileNotFoundError(audio_path)
+
+    # Get the FFmpeg executable bundled/available through imageio-ffmpeg
+    try:
+        import imageio_ffmpeg
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception as error:
+        raise RuntimeError(
+            "FFmpeg could not be located: " + str(error)
         )
 
-    audio, sample_rate = librosa.load(
-        audio_path,
-        sr=16000,
-        mono=True
+    # Create a temporary WAV file
+    temp_wav = tempfile.NamedTemporaryFile(
+        suffix=".wav",
+        delete=False
     )
 
-    audio = np.asarray(
-        audio,
-        dtype=np.float32
-    )
+    temp_wav_path = temp_wav.name
+    temp_wav.close()
 
-    if audio.size == 0:
-        raise ValueError(
-            "Audio contains no usable samples."
+    try:
+
+        # Convert WebM/MP3/M4A/etc. to WAV
+        command = [
+            ffmpeg_exe,
+            "-y",
+            "-i",
+            audio_path,
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-f",
+            "wav",
+            temp_wav_path
+        ]
+
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
         )
 
-
-    target_length = (
-        AASIST_CONFIG["nb_samp"]
-    )
-
-
-    if len(audio) < target_length:
-
-        repeats = int(
-            np.ceil(
-                target_length / len(audio)
+        if result.returncode != 0:
+            raise RuntimeError(
+                "FFmpeg conversion failed:\n"
+                + result.stderr[-2000:]
             )
+
+        # Load the converted WAV
+        audio, sample_rate = librosa.load(
+            temp_wav_path,
+            sr=16000,
+            mono=True
         )
 
-        audio = np.tile(
+        audio = np.asarray(
             audio,
-            repeats
+            dtype=np.float32
         )
 
+        if audio.size == 0:
+            raise ValueError(
+                "Audio contains no usable samples."
+            )
 
-    audio = audio[:target_length]
+        target_length = AASIST_CONFIG["nb_samp"]
 
-    return audio.astype(
-        np.float32
-    )
+        if len(audio) < target_length:
 
+            repeats = int(
+                np.ceil(
+                    target_length / len(audio)
+                )
+            )
 
+            audio = np.tile(
+                audio,
+                repeats
+            )
+
+        audio = audio[:target_length]
+
+        return audio.astype(np.float32)
+
+    finally:
+
+        # Delete temporary WAV file
+        if os.path.exists(temp_wav_path):
+            try:
+                os.remove(temp_wav_path)
+            except Exception:
+                pass
 def analyze_voice(audio_path):
 
     if not os.path.exists(audio_path):

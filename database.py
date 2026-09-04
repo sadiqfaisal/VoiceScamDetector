@@ -169,8 +169,6 @@ def get_incident_report(report_id):
         result["why_flagged"] = []
 
     return result
-
-
 def get_all_incident_reports():
     connection = get_connection()
 
@@ -189,12 +187,37 @@ def get_all_incident_reports():
     for row in rows:
         item = dict(row)
 
+        # If a complete JSON report exists,
+        # load its additional analysis data.
+        report_path = item.get("report_path")
+
+        if report_path and os.path.exists(report_path):
+            try:
+                with open(
+                    report_path,
+                    "r",
+                    encoding="utf-8"
+                ) as file:
+                    full_report = json.load(file)
+
+                item.update(full_report)
+
+            except Exception as error:
+                print(
+                    "HISTORY JSON LOAD ERROR:",
+                    repr(error)
+                )
+
         try:
             item["why_flagged"] = json.loads(
                 item.get("why_flagged") or "[]"
             )
         except Exception:
-            item["why_flagged"] = []
+            if not isinstance(
+                item.get("why_flagged"),
+                list
+            ):
+                item["why_flagged"] = []
 
         results.append(item)
 

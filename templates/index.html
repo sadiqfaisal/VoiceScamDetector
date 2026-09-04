@@ -1,83 +1,430 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>VoiceShield | AI Voice Scam Detector</title>
+    <title>VoiceShield | AI Voice Security</title>
 
     <link
         rel="stylesheet"
         href="{{ url_for('static', filename='style.css') }}"
     >
+
+    <style>
+        /* ===== DASHBOARD ENHANCEMENTS ===== */
+
+        .hero-content {
+            flex: 1;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat {
+            padding: 12px 16px;
+            border: 1px solid rgba(56, 189, 248, 0.14);
+            background: rgba(15, 23, 42, 0.55);
+            border-radius: 12px;
+        }
+
+        .hero-stat strong {
+            display: block;
+            font-size: 17px;
+            color: #f4f7fb;
+        }
+
+        .hero-stat span {
+            font-size: 10px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+        }
+
+        .security-status {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 18px;
+            color: #8ea0b8;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 12px rgba(34,197,94,.8);
+        }
+
+        .analysis-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .analysis-mode {
+            padding: 7px 11px;
+            border-radius: 50px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #67e8f9;
+            background: rgba(56,189,248,.07);
+            border: 1px solid rgba(56,189,248,.15);
+            white-space: nowrap;
+        }
+
+        .engine-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 22px;
+        }
+
+        .engine-card {
+            padding: 18px;
+            border-radius: 15px;
+            border: 1px solid rgba(148,163,184,.11);
+            background: rgba(2,6,23,.35);
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .engine-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: rgba(56,189,248,.08);
+            border: 1px solid rgba(56,189,248,.13);
+            font-size: 19px;
+        }
+
+        .engine-card h4 {
+            margin: 2px 0 5px;
+            font-size: 13px;
+        }
+
+        .engine-card p {
+            margin: 0;
+            font-size: 11px;
+            line-height: 1.55;
+            color: #718096;
+        }
+
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .upload-security {
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .live-card {
+            position: relative;
+        }
+
+        .live-card::after {
+            content: "LIVE";
+            position: absolute;
+            top: 22px;
+            right: 25px;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .15em;
+            color: #64748b;
+            border: 1px solid rgba(148,163,184,.12);
+            padding: 5px 8px;
+            border-radius: 20px;
+        }
+
+        .waveform {
+            height: 55px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            opacity: .8;
+        }
+
+        .waveform span {
+            width: 3px;
+            border-radius: 5px;
+            background: linear-gradient(
+                to bottom,
+                #67e8f9,
+                #6366f1
+            );
+            animation: wave 1.2s ease-in-out infinite;
+        }
+
+        .waveform span:nth-child(1) { height: 18px; animation-delay: .1s; }
+        .waveform span:nth-child(2) { height: 30px; animation-delay: .2s; }
+        .waveform span:nth-child(3) { height: 42px; animation-delay: .3s; }
+        .waveform span:nth-child(4) { height: 25px; animation-delay: .4s; }
+        .waveform span:nth-child(5) { height: 50px; animation-delay: .5s; }
+        .waveform span:nth-child(6) { height: 34px; animation-delay: .6s; }
+        .waveform span:nth-child(7) { height: 45px; animation-delay: .7s; }
+        .waveform span:nth-child(8) { height: 23px; animation-delay: .8s; }
+        .waveform span:nth-child(9) { height: 38px; animation-delay: .9s; }
+        .waveform span:nth-child(10) { height: 19px; animation-delay: 1s; }
+        .waveform span:nth-child(11) { height: 44px; animation-delay: .3s; }
+        .waveform span:nth-child(12) { height: 28px; animation-delay: .5s; }
+
+        @keyframes wave {
+            0%, 100% {
+                transform: scaleY(.55);
+                opacity: .45;
+            }
+            50% {
+                transform: scaleY(1);
+                opacity: 1;
+            }
+        }
+
+        .process-rail {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .process-step {
+            padding: 13px;
+            border-radius: 12px;
+            background: rgba(2,6,23,.35);
+            border: 1px solid rgba(148,163,184,.08);
+        }
+
+        .process-step strong {
+            display: block;
+            font-size: 11px;
+            color: #cbd5e1;
+        }
+
+        .process-step span {
+            font-size: 9px;
+            color: #64748b;
+        }
+
+        .step-number {
+            color: #38bdf8;
+            font-weight: 900;
+            margin-right: 5px;
+        }
+
+        .risk-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .risk-pulse {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #38bdf8;
+            box-shadow: 0 0 14px rgba(56,189,248,.8);
+        }
+
+        .result-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .security-note {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 9px;
+            font-size: 10px;
+            color: #718096;
+            background: rgba(2,6,23,.3);
+            border: 1px solid rgba(148,163,184,.07);
+        }
+
+        .report-badge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 9px;
+            font-weight: 900;
+            color: #67e8f9;
+            background: rgba(56,189,248,.08);
+            border: 1px solid rgba(56,189,248,.15);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        @media (max-width: 800px) {
+            .engine-grid,
+            .process-rail {
+                grid-template-columns: 1fr;
+            }
+
+            .analysis-heading {
+                flex-direction: column;
+            }
+
+            .live-card::after {
+                display: none;
+            }
+        }
+    </style>
 </head>
+
 
 <body>
 
 <header class="topbar">
+
     <div class="brand">
-        <div class="brand-icon">🛡️</div>
+
+        <div class="brand-icon">
+            🛡️
+        </div>
 
         <div>
             <h1>VoiceShield</h1>
-            <p>AI Voice Scam Detection Platform</p>
+            <p>AI Voice Security Platform</p>
         </div>
+
     </div>
 
-    <a
-        href="/history"
-        class="nav-link"
-    >
-        Incident History
-    </a>
+    <div style="display:flex;align-items:center;gap:18px;">
+
+        <div class="security-status">
+            <span class="status-dot"></span>
+            Engine Online
+        </div>
+
+        <a
+            href="/history"
+            class="nav-link"
+        >
+            Incident History
+        </a>
+
+    </div>
+
 </header>
 
 
 <main class="container">
 
+
+    <!-- ================= HERO ================= -->
+
     <section class="hero">
-        <div>
+
+        <div class="hero-content">
+
             <span class="eyebrow">
-                SMART CALL SECURITY
+                AI-POWERED VOICE SECURITY
             </span>
 
             <h2>
-                Detect suspicious calls before
-                they become costly.
+                Know who you're
+                really listening to.
             </h2>
 
             <p>
-                VoiceShield combines speech transcription,
-                scam-language analysis and AI voice
-                anti-spoofing to produce a unified risk
-                assessment.
+                VoiceShield analyzes voice recordings using
+                speech intelligence, scam-language detection
+                and AI voice spoof detection to identify
+                suspicious calls before they become costly.
             </p>
+
+
+            <div class="hero-stats">
+
+                <div class="hero-stat">
+                    <strong>02</strong>
+                    <span>Detection Engines</span>
+                </div>
+
+                <div class="hero-stat">
+                    <strong>AI</strong>
+                    <span>Voice Analysis</span>
+                </div>
+
+                <div class="hero-stat">
+                    <strong>24/7</strong>
+                    <span>Call Protection</span>
+                </div>
+
+            </div>
+
         </div>
+
 
         <div class="hero-shield">
             🛡️
         </div>
+
     </section>
 
 
+
+    <!-- ================= AUDIO ANALYSIS ================= -->
+
     <section class="card">
 
-        <div class="card-header">
-            <div>
-                <h3>Analyze a Voice Recording</h3>
+        <div class="analysis-heading">
+
+            <div class="card-header">
+
+                <span class="eyebrow">
+                    RECORDING ANALYSIS
+                </span>
+
+                <h3>
+                    Analyze suspicious audio
+                </h3>
+
                 <p>
-                    Upload a suspicious call recording
-                    for automated analysis.
+                    Upload a call recording and let
+                    VoiceShield inspect its speech,
+                    scam indicators and voice authenticity.
                 </p>
+
             </div>
+
+            <span class="analysis-mode">
+                ● AUTOMATED SCAN
+            </span>
+
         </div>
 
 
         <form id="analysisForm">
 
+
+            <!-- CALLER INFORMATION -->
+
             <div class="form-grid">
 
                 <div class="field">
+
                     <label for="callerName">
                         Caller Name
                     </label>
@@ -87,10 +434,12 @@
                         type="text"
                         placeholder="Optional"
                     >
+
                 </div>
 
 
                 <div class="field">
+
                     <label for="callerNumber">
                         Caller Number
                     </label>
@@ -100,7 +449,24 @@
                         type="text"
                         placeholder="Optional"
                     >
+
                 </div>
+
+            </div>
+
+
+
+            <!-- UPLOAD -->
+
+            <div class="upload-header">
+
+                <strong style="font-size:13px;">
+                    Audio Source
+                </strong>
+
+                <span class="upload-security">
+                    🔒 Local processing enabled
+                </span>
 
             </div>
 
@@ -115,11 +481,11 @@
                 </div>
 
                 <h4>
-                    Drop audio here
+                    Drop your recording here
                 </h4>
 
                 <p>
-                    or choose a recording from your computer
+                    Upload WAV, MP3, WebM or supported audio
                 </p>
 
                 <input
@@ -135,7 +501,7 @@
                     id="chooseFileButton"
                     class="secondary-button"
                 >
-                    Choose Audio
+                    Choose Audio File
                 </button>
 
                 <div
@@ -151,25 +517,141 @@
                 type="submit"
                 class="primary-button full-width"
             >
-                🔎 Analyze Recording
+                🔎 Start AI Security Analysis
             </button>
 
+
         </form>
+
+
+        <!-- DETECTION ENGINES -->
+
+        <div class="engine-grid">
+
+            <div class="engine-card">
+
+                <div class="engine-icon">
+                    🧠
+                </div>
+
+                <div>
+
+                    <h4>
+                        Scam Intelligence
+                    </h4>
+
+                    <p>
+                        Analyzes speech for suspicious
+                        requests, scam language and
+                        social-engineering indicators.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="engine-card">
+
+                <div class="engine-icon">
+                    🎙️
+                </div>
+
+                <div>
+
+                    <h4>
+                        Voice Authenticity
+                    </h4>
+
+                    <p>
+                        Uses AI voice analysis to identify
+                        synthetic, cloned or spoofed speech.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- PROCESS -->
+
+        <div class="process-rail">
+
+            <div class="process-step">
+                <strong>
+                    <span class="step-number">01</span>
+                    Transcription
+                </strong>
+                <span>
+                    Speech → text
+                </span>
+            </div>
+
+            <div class="process-step">
+                <strong>
+                    <span class="step-number">02</span>
+                    Threat Analysis
+                </strong>
+                <span>
+                    Scam + voice detection
+                </span>
+            </div>
+
+            <div class="process-step">
+                <strong>
+                    <span class="step-number">03</span>
+                    Risk Assessment
+                </strong>
+                <span>
+                    Unified security score
+                </span>
+            </div>
+
+        </div>
 
     </section>
 
 
+
+    <!-- ================= LIVE ANALYSIS ================= -->
+
     <section class="card live-card">
 
         <div class="card-header">
-            <div>
-                <h3>🎤 Live Microphone Analysis</h3>
 
-                <p>
-                    Record a short sample and analyze it
-                    directly from your microphone.
-                </p>
-            </div>
+            <span class="eyebrow">
+                REAL-TIME ANALYSIS
+            </span>
+
+            <h3>
+                Live microphone detection
+            </h3>
+
+            <p>
+                Record a short voice sample and
+                analyze it directly through your microphone.
+            </p>
+
+        </div>
+
+
+        <div class="waveform">
+
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+
         </div>
 
 
@@ -206,11 +688,14 @@
             id="liveStatus"
             class="status-text"
         >
-            Microphone is ready.
+            Microphone is ready for secure analysis.
         </div>
 
     </section>
 
+
+
+    <!-- ================= LOADING ================= -->
 
     <section
         id="loadingSection"
@@ -220,53 +705,102 @@
         <div class="spinner"></div>
 
         <h3>
-            Analyzing audio...
+            AI engines are analyzing the audio
         </h3>
 
         <p>
-            Whisper is transcribing the speech and
-            VoiceShield is checking scam indicators
-            and voice authenticity.
+            Whisper is transcribing the speech while
+            VoiceShield checks scam indicators and
+            voice authenticity.
         </p>
+
+        <div class="process-rail">
+
+            <div class="process-step">
+                <strong>01 · Speech</strong>
+                <span>Transcription</span>
+            </div>
+
+            <div class="process-step">
+                <strong>02 · Intelligence</strong>
+                <span>Scam detection</span>
+            </div>
+
+            <div class="process-step">
+                <strong>03 · Authenticity</strong>
+                <span>AI voice detection</span>
+            </div>
+
+        </div>
 
     </section>
 
+
+
+    <!-- ================= ERROR ================= -->
 
     <section
         id="errorSection"
         class="card error-card hidden"
     >
 
-        <h3>⚠️ Analysis Error</h3>
+        <h3>
+            ⚠️ Analysis Error
+        </h3>
 
         <p id="errorMessage"></p>
 
     </section>
 
 
+
+    <!-- ================= RESULTS ================= -->
+
     <section
         id="resultsSection"
         class="results hidden"
     >
 
-        <div class="section-title">
-            <div>
-                <span class="eyebrow">
-                    ANALYSIS RESULT
-                </span>
 
-                <h2>
-                    Threat Assessment
-                </h2>
-            </div>
+        <div class="section-title">
+
+            <span class="eyebrow">
+                SECURITY INTELLIGENCE
+            </span>
+
+            <h2>
+                Threat Assessment
+            </h2>
+
+            <p>
+                Combined analysis from VoiceShield's
+                scam intelligence and voice authenticity engines.
+            </p>
+
         </div>
 
+
+
+        <!-- RISK -->
 
         <div class="risk-card">
 
             <div class="risk-main">
 
-                <span id="riskBadge" class="risk-badge">
+                <div class="risk-header">
+
+                    <span class="risk-pulse"></span>
+
+                    <span>
+                        OVERALL THREAT
+                    </span>
+
+                </div>
+
+                <span
+                    id="riskBadge"
+                    class="risk-badge"
+                >
                     UNKNOWN
                 </span>
 
@@ -294,16 +828,29 @@
                     -
                 </p>
 
+                <div class="security-note">
+                    VoiceShield combines multiple detection
+                    signals into a unified risk assessment.
+                </div>
+
             </div>
 
         </div>
 
 
+
+        <!-- RESULT CARDS -->
+
         <div class="result-grid">
+
+
+            <!-- TRANSCRIPT -->
 
             <div class="result-card">
 
-                <h3>📝 Transcript</h3>
+                <h3>
+                    📝 Speech Transcript
+                </h3>
 
                 <div
                     id="transcript"
@@ -315,12 +862,17 @@
             </div>
 
 
+
+            <!-- SCAM -->
+
             <div class="result-card">
 
-                <h3>🚨 Scam Analysis</h3>
+                <h3>
+                    🚨 Scam Intelligence
+                </h3>
 
                 <div class="metric">
-                    <span>Scam Score</span>
+                    <span>Scam Risk Score</span>
                     <strong id="scamScore">0%</strong>
                 </div>
 
@@ -330,30 +882,59 @@
                 >
                 </div>
 
+                <div class="security-note">
+                    Language patterns and suspicious
+                    behavioral indicators detected in speech.
+                </div>
+
             </div>
 
 
+
+            <!-- VOICE -->
+
             <div class="result-card">
 
-                <h3>🤖 Voice Authenticity</h3>
+                <h3>
+                    🤖 Voice Authenticity
+                </h3>
 
                 <div class="voice-result">
+
                     <strong id="voiceResult">
                         UNKNOWN
                     </strong>
+
                 </div>
 
                 <div class="metric">
-                    <span>AI / Spoof Score</span>
-                    <strong id="voiceScore">0%</strong>
+
+                    <span>
+                        AI / Spoof Score
+                    </span>
+
+                    <strong id="voiceScore">
+                        0%
+                    </strong>
+
+                </div>
+
+                <div class="security-note">
+                    Acoustic analysis estimates whether
+                    the voice may be synthetic or spoofed.
                 </div>
 
             </div>
 
 
+
+            <!-- RECOMMENDATION -->
+
             <div class="result-card">
 
-                <h3>🛡️ Recommendation</h3>
+                <h3>
+                    🛡️ Security Recommendation
+                </h3>
 
                 <p
                     id="recommendation"
@@ -364,12 +945,35 @@
 
             </div>
 
+
         </div>
 
 
+
+        <!-- WHY FLAGGED -->
+
         <div class="card">
 
-            <h3>Why VoiceShield Flagged This</h3>
+            <div class="report-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        EXPLAINABLE AI
+                    </span>
+
+                    <h3>
+                        Why VoiceShield flagged this
+                    </h3>
+
+                </div>
+
+                <span class="report-badge">
+                    Analysis Evidence
+                </span>
+
+            </div>
+
 
             <ul
                 id="whyFlaggedList"
@@ -380,25 +984,37 @@
         </div>
 
 
+
+        <!-- REPORT -->
+
         <div class="card report-card">
 
             <div>
+
+                <span class="eyebrow">
+                    DIGITAL INCIDENT RECORD
+                </span>
+
                 <h3>
                     📄 Generate Official Incident Report
                 </h3>
 
                 <p>
-                    Save the analysis with a unique
-                    report ID and QR code.
+                    Create a tamper-resistant reference
+                    containing the analysis, risk score,
+                    report ID and QR access code.
                 </p>
+
             </div>
+
 
             <button
                 id="generateReportButton"
                 class="primary-button"
             >
-                Generate Report
+                Generate Incident Report
             </button>
+
 
             <div
                 id="reportResult"
@@ -406,48 +1022,65 @@
             >
 
                 <strong>
-                    Report created successfully.
+                    ✓ Incident report created successfully.
                 </strong>
 
                 <p>
                     Report ID:
-                    <span id="reportId"></span>
+                    <span
+                        id="reportId"
+                        class="report-id"
+                    ></span>
                 </p>
+
 
                 <a
                     id="viewReportLink"
                     class="secondary-button"
                     target="_blank"
                 >
-                    View Report
+                    View Official Report
                 </a>
 
+
                 <div class="qr-wrapper">
+
+                    <p style="font-size:11px;">
+                        Scan to access the incident report
+                    </p>
+
                     <img
                         id="qrCode"
                         alt="Report QR Code"
                     >
+
                 </div>
 
             </div>
 
         </div>
 
+
     </section>
 
 </main>
 
 
+
 <footer class="footer">
+
     <p>
-        VoiceShield • SIH Project • AI-assisted
-        voice scam detection
+        <strong>VoiceShield</strong>
+        • AI Voice Scam Detection Platform
+        • SIH Project
     </p>
 
     <p>
-        Automated results are advisory and should
-        be independently verified.
+        AI-assisted results are advisory.
+        Independent verification is recommended
+        before taking action.
     </p>
+
 </footer>
 
 
@@ -456,4 +1089,5 @@
 ></script>
 
 </body>
+
 </html>
