@@ -1,6 +1,6 @@
 Flask
 openai-whisper
-torch==2.14.0
+torch==2.13.0
 numpy
 scipy
 librosa
@@ -9,4 +9,5 @@ qrcode[pil]
 Pillow
 huggingface_hub
 gunicorn
+imageio
 imageio-ffmpeg
