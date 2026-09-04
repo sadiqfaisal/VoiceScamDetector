@@ -1,11 +1,8 @@
 import os
 import json
 import uuid
-import shutil
 
 import imageio_ffmpeg
-import os
-os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
 
 from flask import (
     Flask,
@@ -20,7 +17,6 @@ import whisper
 
 from werkzeug.utils import secure_filename
 
-
 from scam_detector import analyze_transcript
 from voice_detector import analyze_voice
 from live_analyzer import analyze_live_audio
@@ -34,10 +30,31 @@ from database import (
 )
 
 
+# ============================================================
+# FFMPEG SETUP
+# ============================================================
+
+FFMPEG_EXE = imageio_ffmpeg.get_ffmpeg_exe()
+
+os.environ["PATH"] = (
+    os.path.dirname(FFMPEG_EXE)
+    + os.pathsep
+    + os.environ.get("PATH", "")
+)
+
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
 BASE_DIR = os.path.abspath(
     os.path.dirname(__file__)
 )
-FFMPEG_DIR = os.path.join(BASE_DIR, "bin")
+
+FFMPEG_DIR = os.path.join(
+    BASE_DIR,
+    "bin"
+)
 
 os.environ["PATH"] = (
     FFMPEG_DIR
@@ -55,7 +72,6 @@ REPORT_FOLDER = os.path.join(
     "reports"
 )
 
-
 os.makedirs(
     UPLOAD_FOLDER,
     exist_ok=True
@@ -67,6 +83,10 @@ os.makedirs(
 )
 
 
+# ============================================================
+# FLASK APP
+# ============================================================
+
 app = Flask(
     __name__,
     template_folder="templates",
@@ -77,7 +97,17 @@ app.config["MAX_CONTENT_LENGTH"] = (
     25 * 1024 * 1024
 )
 
+
+# ============================================================
+# DATABASE
+# ============================================================
+
 initialize_database()
+
+
+# ============================================================
+# AUDIO SETTINGS
+# ============================================================
 
 ALLOWED_EXTENSIONS = {
     "wav",
@@ -91,10 +121,15 @@ ALLOWED_EXTENSIONS = {
 }
 
 
+# ============================================================
+# WHISPER MODEL
+# ============================================================
+
 _whisper_model = None
 
 
 def allowed_file(filename):
+
     if not filename:
         return False
 
@@ -110,19 +145,28 @@ def allowed_file(filename):
 
 
 def get_whisper_model():
+
     global _whisper_model
 
     if _whisper_model is None:
-        print("Loading Whisper base model...")
-        _whisper_model = whisper.load_model(
-            "base"
+
+        print(
+            "Loading lightweight Whisper tiny model..."
         )
-        print("Whisper loaded successfully.")
+
+        _whisper_model = whisper.load_model(
+            "tiny"
+        )
+
+        print(
+            "Whisper tiny loaded successfully."
+        )
 
     return _whisper_model
 
 
 def transcribe_audio(audio_path):
+
     model = get_whisper_model()
 
     result = model.transcribe(
@@ -136,10 +180,15 @@ def transcribe_audio(audio_path):
     ).strip()
 
 
+# ============================================================
+# RISK CALCULATION
+# ============================================================
+
 def calculate_final_risk(
     scam_score,
     fake_score
 ):
+
     scam_score = float(
         max(
             0,
@@ -169,27 +218,39 @@ def calculate_final_risk(
         scam_score >= 75
         and fake_score >= 70
     ):
+
         risk_level = "CRITICAL"
 
     elif final_score >= 65:
+
         risk_level = "HIGH"
 
     elif final_score >= 35:
+
         risk_level = "MEDIUM"
 
     else:
+
         risk_level = "LOW"
 
-    return round(
-        final_score,
-        2
-    ), risk_level
+    return (
+        round(
+            final_score,
+            2
+        ),
+        risk_level
+    )
 
+
+# ============================================================
+# FINAL ANALYSIS
+# ============================================================
 
 def build_final_analysis(
     scam_analysis,
     voice_analysis
 ):
+
     scam_score = float(
         scam_analysis.get(
             "scam_score",
@@ -224,19 +285,24 @@ def build_final_analysis(
     )
 
     for keyword in keywords:
+
         why_flagged.append(
             "Scam indicator detected: "
             + str(keyword)
         )
 
     for category in categories:
+
         reason = (
             "Scam category: "
             + str(category)
         )
 
         if reason not in why_flagged:
-            why_flagged.append(reason)
+
+            why_flagged.append(
+                reason
+            )
 
     voice_result = voice_analysis.get(
         "voice_result",
@@ -244,18 +310,21 @@ def build_final_analysis(
     )
 
     if voice_result == "AI / SYNTHETIC VOICE":
+
         why_flagged.append(
             "Audio shows strong AI/synthetic "
             "voice characteristics."
         )
 
     elif voice_result == "SUSPICIOUS / UNCERTAIN":
+
         why_flagged.append(
             "Voice authenticity is uncertain "
             "according to the anti-spoofing model."
         )
 
     if not why_flagged:
+
         why_flagged.append(
             "No major automated warning indicator "
             "was detected."
@@ -265,6 +334,7 @@ def build_final_analysis(
         "CRITICAL",
         "HIGH"
     ):
+
         recommendation = (
             "Do not share OTPs, PINs, CVV, passwords "
             "or banking information. End the call and "
@@ -280,6 +350,7 @@ def build_final_analysis(
         )
 
     elif risk_level == "MEDIUM":
+
         recommendation = (
             "Do not provide sensitive information until "
             "the caller's identity is independently verified. "
@@ -294,6 +365,7 @@ def build_final_analysis(
         )
 
     else:
+
         recommendation = (
             "No strong scam indicators were detected, "
             "but automated analysis cannot guarantee that "
@@ -307,48 +379,76 @@ def build_final_analysis(
         )
 
     if scam_score >= 70:
+
         detection_result = (
             "HIGH SCAM INDICATORS"
         )
 
     elif scam_score >= 35:
+
         detection_result = (
             "SUSPICIOUS SCAM INDICATORS"
         )
 
     else:
+
         detection_result = (
             "NO STRONG SCAM INDICATORS"
         )
 
     return {
+
         "final_score": final_score,
+
         "risk_level": risk_level,
+
         "message": message,
+
         "why_flagged": why_flagged,
+
         "recommendation": recommendation,
+
         "detection_result": detection_result
     }
 
 
+# ============================================================
+# HOME
+# ============================================================
+
 @app.route("/")
 def index():
+
     return render_template(
         "index.html"
     )
 
 
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
 @app.route("/health")
 def health():
+
     return jsonify({
         "success": True,
         "status": "VoiceShield backend running"
     })
 
 
-@app.route("/analyze", methods=["POST"])
+# ============================================================
+# AUDIO UPLOAD ANALYSIS
+# ============================================================
+
+@app.route(
+    "/analyze",
+    methods=["POST"]
+)
 def analyze():
+
     if "audio" not in request.files:
+
         return jsonify({
             "success": False,
             "error": "No audio file was uploaded."
@@ -357,6 +457,7 @@ def analyze():
     audio = request.files["audio"]
 
     if not audio.filename:
+
         return jsonify({
             "success": False,
             "error": "Please select an audio file."
@@ -365,6 +466,7 @@ def analyze():
     if not allowed_file(
         audio.filename
     ):
+
         return jsonify({
             "success": False,
             "error": (
@@ -396,8 +498,17 @@ def analyze():
     audio.save(file_path)
 
     try:
+
+        print(
+            "Starting uploaded audio analysis..."
+        )
+
         transcript = transcribe_audio(
             file_path
+        )
+
+        print(
+            "Transcription completed."
         )
 
         scam_analysis = (
@@ -406,10 +517,18 @@ def analyze():
             )
         )
 
+        print(
+            "Scam analysis completed."
+        )
+
         voice_analysis = (
             analyze_voice(
                 file_path
             )
+        )
+
+        print(
+            "Voice analysis completed."
         )
 
         final_analysis = (
@@ -419,38 +538,71 @@ def analyze():
             )
         )
 
+        print(
+            "Final analysis completed."
+        )
+
         return jsonify({
+
             "success": True,
+
             "analysis_id": uuid.uuid4().hex,
+
             "analysis_mode": "Audio Upload",
+
             "transcript": transcript,
+
             "scam_analysis": scam_analysis,
+
             "voice_analysis": voice_analysis,
+
             "final_analysis": final_analysis
+
         })
 
     except Exception as error:
+
         print(
             "ANALYZE ERROR:",
             repr(error)
         )
 
         return jsonify({
+
             "success": False,
+
             "error": str(error)
+
         }), 500
 
     finally:
+
         try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+
+            if os.path.exists(
+                file_path
+            ):
+
+                os.remove(
+                    file_path
+                )
+
         except Exception:
             pass
 
 
-@app.route("/analyze-live", methods=["POST"])
+# ============================================================
+# LIVE MICROPHONE ANALYSIS
+# ============================================================
+
+@app.route(
+    "/analyze-live",
+    methods=["POST"]
+)
 def analyze_live():
+
     if "audio" not in request.files:
+
         return jsonify({
             "success": False,
             "error": "No microphone recording received."
@@ -459,6 +611,7 @@ def analyze_live():
     audio = request.files["audio"]
 
     if not audio.filename:
+
         return jsonify({
             "success": False,
             "error": "Live recording was empty."
@@ -477,11 +630,20 @@ def analyze_live():
     audio.save(file_path)
 
     try:
+
+        print(
+            "Starting live microphone analysis..."
+        )
+
         model = get_whisper_model()
 
         result = analyze_live_audio(
             file_path,
             model
+        )
+
+        print(
+            "Live transcription and voice analysis completed."
         )
 
         final_analysis = (
@@ -492,50 +654,77 @@ def analyze_live():
         )
 
         return jsonify({
+
             "success": True,
+
             "analysis_id": uuid.uuid4().hex,
+
             "analysis_mode": "Live Microphone",
+
             "transcript": result["transcript"],
+
             "scam_analysis": result["scam_analysis"],
+
             "voice_analysis": result["voice_analysis"],
+
             "final_analysis": final_analysis
+
         })
 
     except Exception as error:
+
         print(
             "LIVE ANALYSIS ERROR:",
             repr(error)
         )
 
         return jsonify({
+
             "success": False,
+
             "error": str(error)
+
         }), 500
 
     finally:
+
         try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+
+            if os.path.exists(
+                file_path
+            ):
+
+                os.remove(
+                    file_path
+                )
+
         except Exception:
             pass
 
+
+# ============================================================
+# REPORT GENERATION
+# ============================================================
 
 @app.route(
     "/generate-report",
     methods=["POST"]
 )
 def generate_report_route():
+
     data = request.get_json(
         silent=True
     )
 
     if not data:
+
         return jsonify({
             "success": False,
             "error": "No report data received."
         }), 400
 
     try:
+
         report_result = generate_report(
             data,
             base_url=request.host_url.rstrip("/")
@@ -552,60 +741,88 @@ def generate_report_route():
         )
 
         return jsonify({
+
             "success": True,
+
             "report_id": report_id,
+
             "report_url": (
                 "/report/"
                 + report_id
             ),
+
             "qr_code": (
                 "/report/"
                 + report_id
                 + "/qr"
             )
+
         })
 
     except Exception as error:
+
         print(
             "REPORT ERROR:",
             repr(error)
         )
 
         return jsonify({
+
             "success": False,
+
             "error": str(error)
+
         }), 500
 
+
+# ============================================================
+# REPORT PAGE
+# ============================================================
 
 @app.route(
     "/report/<report_id>"
 )
-@app.route("/report/<report_id>")
 def report_page(report_id):
 
-    report_record = get_incident_report(report_id)
+    report_record = get_incident_report(
+        report_id
+    )
 
     if not report_record:
         abort(404)
 
-    # Load the complete report from the JSON file
-    report_path = report_record.get("report_path")
+    report_path = report_record.get(
+        "report_path"
+    )
 
-    if report_path and os.path.exists(report_path):
+    if (
+        report_path
+        and os.path.exists(report_path)
+    ):
 
         try:
+
             with open(
                 report_path,
                 "r",
                 encoding="utf-8"
             ) as file:
-                report = json.load(file)
+
+                report = json.load(
+                    file
+                )
 
         except Exception as error:
-            print("REPORT LOAD ERROR:", repr(error))
+
+            print(
+                "REPORT LOAD ERROR:",
+                repr(error)
+            )
+
             report = report_record
 
     else:
+
         report = report_record
 
     return render_template(
@@ -614,10 +831,15 @@ def report_page(report_id):
     )
 
 
+# ============================================================
+# QR CODE
+# ============================================================
+
 @app.route(
     "/report/<report_id>/qr"
 )
 def report_qr(report_id):
+
     report = get_incident_report(
         report_id
     )
@@ -641,28 +863,45 @@ def report_qr(report_id):
     )
 
 
+# ============================================================
+# REPORT API
+# ============================================================
+
 @app.route(
     "/api/report/<report_id>"
 )
 def report_api(report_id):
+
     report = get_incident_report(
         report_id
     )
 
     if not report:
+
         return jsonify({
+
             "success": False,
+
             "error": "Report not found."
+
         }), 404
 
     return jsonify({
+
         "success": True,
+
         "report": report
+
     })
 
 
+# ============================================================
+# INCIDENT HISTORY
+# ============================================================
+
 @app.route("/history")
 def history():
+
     reports = get_all_incident_reports()
 
     return render_template(
@@ -673,11 +912,19 @@ def history():
 
 @app.route("/api/history")
 def history_api():
+
     return jsonify({
+
         "success": True,
+
         "reports": get_all_incident_reports()
+
     })
 
+
+# ============================================================
+# LOCAL DEVELOPMENT
+# ============================================================
 
 if __name__ == "__main__":
 
